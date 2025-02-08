@@ -47,8 +47,9 @@ bool do_exec(int count, ...)
     char * command[count+1];
     va_start(args, count);
     int i;
+    int pid;
 
-    int status;
+    int status = 0;
 
     for(i=0; i<count; i++)
     {
@@ -66,24 +67,24 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
-    switch (fork()) {
-        case -1:
-            perror("fork");
-            return false;
-        case 0:
-            if (execv(command[0], &command[1]) < 0) { 
-                perror("execv()");
-                exit(1);
-            }
-        default:
-            wait(&status);
-            if (WIFEXITED(status) != 0) {
-                if (WEXITSTATUS(status) != 0)
-                    return false;
-            }
+    if ((pid = fork()) < 0)  {
+        perror("fork");
+        return false;
     }
-
-    return true;
+    if (pid == 0)  {
+        if (execv(command[0], &command[0]) < 0) { 
+            perror("execv()");                
+            exit(1);
+        }
+    } else {
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status) != 0) {
+            if (WEXITSTATUS(status) != 0)
+                return false;
+        } else 
+            return true;    
+    }
+    return true;    /* should never get here */
 }
 
 /**
@@ -118,12 +119,16 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         perror(outputfile);
         return false;
     }
+    if (dup2(fd, 1) < 0)  {
+        perror("dup2");
+        return false;
+    }
     switch (fork()) {
         case -1:
             perror("fork");
             return false;
         case 0:
-            if (execv(command[0], &command[1]) < 0) { 
+            if (execv(command[0], &command[0]) < 0) { 
                 perror("execv()");
                 exit(1);
             }
