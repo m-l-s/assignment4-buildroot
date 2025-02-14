@@ -38,7 +38,7 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     # TODO: Add your kernel build steps here
     make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} mrproper
     make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} defconfig
-    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} all
+    make -j4 ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} all
     # make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} modules
     make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} dtbs
 
@@ -115,6 +115,6 @@ sudo chown -R root:root ${OUTDIR}/rootfs
 # TODO: Create initramfs.cpio.gz
 
 cd ${OUTDIR}/rootfs
-find . | cpio -H newc -o --owner=root:root | gzip -9 -n >${OUTDIR}/initramfs.cpio
+find . | cpio -H newc -o --owner=root:root | gzip  >${OUTDIR}/initramfs.cpio.gz
 cd ${OUTDIR}
-gzip -f initramfs.cpio
+# gzip -f initramfs.cpio
