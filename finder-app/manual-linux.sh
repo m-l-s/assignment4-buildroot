@@ -29,6 +29,7 @@ if [ ! -d "${OUTDIR}/linux-stable" ]; then
 	echo "CLONING GIT LINUX STABLE VERSION ${KERNEL_VERSION} IN ${OUTDIR}"
 	git clone ${KERNEL_REPO} --depth 1 --single-branch --branch ${KERNEL_VERSION}
 fi
+
 if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     cd linux-stable
     echo "Checking out version ${KERNEL_VERSION}"
@@ -38,11 +39,13 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} mrproper
     make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} defconfig
     make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} all
-    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} modules
+    # make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} modules
+    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} dtbs
+
 fi
 
 echo "Adding the Image in outdir"
-cp ./linux-stable/arch/${ARCH}/boot/Image ${OUTDIR}
+cp ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ${OUTDIR}
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
@@ -56,9 +59,8 @@ fi
 rm -rf ${OUTDIR}/rootfs
 mkdir ${OUTDIR}/rootfs
 cd ${OUTDIR}/rootfs
-mkdir -p tmp etc dev dev lib64 proc sbin var sys usr home
-mkdir -p var/log usr/lib usr/sbin usr/bin
-
+mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr var
+mkdir -p usr/bin usr/lib usr/sbin var/log
 
 cd "$OUTDIR"
 if [ ! -d "${OUTDIR}/busybox" ]
@@ -91,7 +93,7 @@ cp -L ${SYSROOT}/lib64/libresolv.so* lib64
 cp -L $SYSROOT/lib/ld-linux-aarch* lib
 
 # TODO: Make device nodes
-sudo mknod -m 600 dev/console c 5 1
+sudo mknod -m 666 dev/console c 5 1
 sudo mknod -m 666 dev/null c 1 3
 
 # TODO: Clean and build the writer utility
@@ -113,4 +115,6 @@ sudo chown -R root:root ${OUTDIR}/rootfs
 # TODO: Create initramfs.cpio.gz
 
 cd ${OUTDIR}/rootfs
-find . -print | cpio -H newc -ov --owner root:root  | gzip >${OUTDIR}/initramfs.cpio.gz
+find . | cpio -H newc -o --owner=root:root | gzip -9 -n >${OUTDIR}/initramfs.cpio
+cd ${OUTDIR}
+gzip -f initramfs.cpio
